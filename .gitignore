@@ -3,3 +3,4 @@ out/
 .shadow-cljs/
 *.vsix
 .vscode-test/
+.nrepl-port
