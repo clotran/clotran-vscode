@@ -1,0 +1,8 @@
+.shadow-cljs/**
+shadow-cljs.edn
+src/**
+test/**
+out/test.js
+.vscode-test/**
+*.vsix
+.gitignore

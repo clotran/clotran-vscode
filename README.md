@@ -23,6 +23,14 @@ nothing else to install.
   to native code, waiting for the build and saying how it went. What is
   printed goes to the `clotran` output channel.
 
+With no clotran on the machine, the extension offers to install it:
+**Install clotran** (or **clotran: Install clotran** from the command
+palette) runs clotran's own install script -- the release for this
+machine, checked against its SHA256SUMS, into `~/.local` (on Windows
+`%LOCALAPPDATA%\Programs\clotran`), where a terminal finds it too -- and
+starts the language server. A Fortran compiler (gfortran or flang) is
+needed for packages; lldb-dap for the debugger.
+
 Settings: `clotran.program`, the command (`clotran` by default; a full
 path when VS Code's PATH has none), and `clotran.languageServer`.
 

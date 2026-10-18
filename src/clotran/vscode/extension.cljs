@@ -18,12 +18,39 @@
 
 (def ^:private vscode (js/require "vscode"))
 (def ^:private child-process (js/require "child_process"))
+(def ^:private fs (js/require "fs"))
+(def ^:private path (js/require "path"))
+(def ^:private os (js/require "os"))
 (def ^:private lc (js/require "vscode-languageclient/node"))
 
 (defonce ^:private state (atom {:client nil :conn nil :server nil :output nil :decoration nil}))
 
 (defn- config [k] (.get (.getConfiguration (.-workspace vscode) "clotran") k))
-(defn- program [] (or (config "program") "clotran"))
+(def ^:private windows? (= "win32" (.-platform js/process)))
+
+(defn- installed-places
+  "Where clotran's install scripts put the command: install.sh's
+  ~/.local/bin, install.ps1's %LOCALAPPDATA%\\Programs\\clotran\\bin."
+  []
+  (if windows?
+    [(.join path (or (.. js/process -env -LOCALAPPDATA) "") "Programs" "clotran" "bin" "clotran.cmd")]
+    [(.join path (.homedir os) ".local" "bin" "clotran")]))
+
+(defn- find-program
+  "The clotran command as a full path: the clotran.program setting, else
+  clotran on PATH, else where the install scripts put it (VS Code started
+  from the Dock or the Start menu often has no ~/.local/bin on its PATH);
+  nil when there is none."
+  []
+  (let [p (or (config "program") "clotran")
+        exts (if windows? [".cmd" ".exe" ""] [""])
+        on-path (for [d (str/split (or (.. js/process -env -PATH) "") (re-pattern (.-delimiter path)))
+                      :when (seq d) e exts]
+                  (.join path d (str p e)))]
+    (first (filter #(.existsSync fs %)
+                   (if (.isAbsolute path p) [p] (concat on-path (installed-places)))))))
+
+(defn- program [] (or (find-program) (config "program") "clotran"))
 
 (defn- output []
   (or (:output @state)
@@ -204,6 +231,53 @@
                              :else (warn "clotran: no answer from compiling" name)))))
             (.catch (fn [e] (warn "clotran:" (.-message e)))))))))
 
+;;; ---- installing clotran -------------------------------------------------------------------
+
+(def ^:private install-script
+  (if windows?
+    "irm https://raw.githubusercontent.com/clotran/clotran/main/install.ps1 | iex"
+    "curl -fsSL https://raw.githubusercontent.com/clotran/clotran/main/install.sh | sh"))
+
+(defn- install!
+  "clotran's own install script, as the README gives it -- the release for
+  this machine, checked against its SHA256SUMS, put where a terminal
+  finds it too -- with its output in the clotran channel; then the
+  language server started. A promise of whether it installed."
+  [context]
+  (say ";; installing clotran:" install-script)
+  (.show (output) true)
+  (.withProgress (.-window vscode)
+                 #js {:location (.. vscode -ProgressLocation -Notification) :title "Installing clotran"}
+                 (fn [_]
+                   (js/Promise.
+                    (fn [resolve _]
+                      (let [proc (if windows?
+                                   (.spawn child-process "powershell" #js ["-NoProfile" "-ExecutionPolicy" "Bypass" "-Command" install-script])
+                                   (.spawn child-process "sh" #js ["-c" install-script]))]
+                        (.on (.-stdout proc) "data" #(.append (output) (str %)))
+                        (.on (.-stderr proc) "data" #(.append (output) (str %)))
+                        (.on proc "error" (fn [e] (warn "clotran: the install did not start:" (.-message e)) (resolve false)))
+                        (.on proc "exit"
+                             (fn [code]
+                               (if (and (zero? code) (find-program))
+                                 (do (info "clotran is installed:" (find-program))
+                                     (when-not (:client @state) (start-language-client! context))
+                                     (resolve true))
+                                 (do (warn "clotran: the install failed; the clotran output channel says why")
+                                     (resolve false)))))))))))
+
+(defn- offer-install!
+  "Asked once a machine has no clotran, until the answer is Not now
+  (clotran: Install clotran is there after)."
+  [context]
+  (let [memo (.-globalState context)]
+    (when-not (or (find-program) (.get memo "clotran.declinedInstall"))
+      (-> (.showInformationMessage (.-window vscode) "clotran is not installed. Install it now?" "Install clotran" "Not now")
+          (.then #(case %
+                    "Install clotran" (install! context)
+                    "Not now" (.update memo "clotran.declinedInstall" true)
+                    nil))))))
+
 ;;; ---- activation -------------------------------------------------------------------
 
 (defn- register-debugger! [context]
@@ -215,11 +289,14 @@
                (fn [_session _executable]
                  (new (.-DebugAdapterExecutable vscode) (program) #js ["dap"] #js {:cwd (or (workspace-root) ".")}))})))
 
+(declare test-state)
+
 (defn activate [context]
-  (start-language-client! context)
+  (if (find-program) (start-language-client! context) (offer-install! context))
   (register-debugger! context)
   (doseq [[name f] {"clotran.jackIn" jack-in "clotran.evalForm" eval-form "clotran.evalSelection" eval-selection
-                    "clotran.loadFile" load-file! "clotran.compileFile" compile-file! "clotran.quit" quit}]
+                    "clotran.loadFile" load-file! "clotran.compileFile" compile-file! "clotran.quit" quit
+                    "clotran.install" #(install! context)}]
     (.push (.-subscriptions context) (.registerCommand (.-commands vscode) name f)))
   (.push (.-subscriptions context) (.onDidChangeTextDocument (.-workspace vscode) (fn [_] (clear-inline!))))
   (say ";; clotran extension active")

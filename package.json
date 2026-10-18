@@ -4,7 +4,7 @@
   "description": "clotran -- Clojure hosted on Fortran: the language server, a REPL, evaluate at the cursor, load, compile.",
   "version": "0.1.0",
   "publisher": "clotran",
-  "license": "EPL-1.0",
+  "license": "EPL-2.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/clotran/clotran-vscode"
@@ -18,7 +18,8 @@
   "activationEvents": [
     "workspaceContains:**/*.cljf",
     "workspaceContains:**/package.edn",
-    "onDebugResolve:clotran"
+    "onDebugResolve:clotran",
+    "onStartupFinished"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -50,6 +51,10 @@
       {
         "command": "clotran.compileFile",
         "title": "clotran: Load and compile this file to native code"
+      },
+      {
+        "command": "clotran.install",
+        "title": "clotran: Install clotran (the release for this machine)"
       },
       {
         "command": "clotran.quit",
@@ -163,7 +168,7 @@
     "build": "shadow-cljs release ext",
     "watch": "shadow-cljs watch ext",
     "test": "shadow-cljs compile test && node out/test.js",
-    "package": "vsce package --no-dependencies"
+    "package": "shadow-cljs release ext && vsce package"
   },
   "dependencies": {
     "vscode-languageclient": "^9.0.1"
