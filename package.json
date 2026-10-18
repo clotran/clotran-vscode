@@ -94,8 +94,8 @@
       "properties": {
         "clotran.program": {
           "type": "string",
-          "default": "clotran",
-          "description": "The clotran command; a full path when VS Code's PATH has none."
+          "default": "",
+          "description": "The clotran command. Empty: the clotran this extension carries (its build for this platform), else clotran on PATH, else where clotran's install script puts it."
         },
         "clotran.languageServer": {
           "type": "boolean",

@@ -4,3 +4,5 @@ out/
 *.vsix
 .vscode-test/
 .nrepl-port
+clotran/
+dist/

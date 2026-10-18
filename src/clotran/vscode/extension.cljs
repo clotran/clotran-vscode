@@ -23,7 +23,7 @@
 (def ^:private os (js/require "os"))
 (def ^:private lc (js/require "vscode-languageclient/node"))
 
-(defonce ^:private state (atom {:client nil :conn nil :server nil :output nil :decoration nil}))
+(defonce ^:private state (atom {:client nil :conn nil :server nil :output nil :decoration nil :ext-path nil}))
 
 (defn- config [k] (.get (.getConfiguration (.-workspace vscode) "clotran") k))
 (def ^:private windows? (= "win32" (.-platform js/process)))
@@ -36,21 +36,50 @@
     [(.join path (or (.. js/process -env -LOCALAPPDATA) "") "Programs" "clotran" "bin" "clotran.cmd")]
     [(.join path (.homedir os) ".local" "bin" "clotran")]))
 
-(defn- find-program
-  "The clotran command as a full path: the clotran.program setting, else
-  clotran on PATH, else where the install scripts put it (VS Code started
-  from the Dock or the Start menu often has no ~/.local/bin on its PATH);
-  nil when there is none."
+(defn- bundled-bin
+  "The bin directory of the clotran this extension carries -- its build
+  for this platform has one (scripts/package) -- or nil."
   []
-  (let [p (or (config "program") "clotran")
+  (when-let [ext (:ext-path @state)]
+    (let [bin (.join path ext "clotran" "bin")]
+      (when (.existsSync fs (.join path bin (if windows? "clotran.cmd" "clotran")))
+        bin))))
+
+(defn- find-program
+  "The clotran command as a full path: the clotran.program setting when
+  set, else the clotran this extension carries, else clotran on PATH,
+  else where the install scripts put it (VS Code started from the Dock
+  or the Start menu often has no ~/.local/bin on its PATH); nil when
+  there is none."
+  []
+  (let [chosen (not-empty (config "program"))
+        p (or chosen "clotran")
         exts (if windows? [".cmd" ".exe" ""] [""])
         on-path (for [d (str/split (or (.. js/process -env -PATH) "") (re-pattern (.-delimiter path)))
                       :when (seq d) e exts]
                   (.join path d (str p e)))]
     (first (filter #(.existsSync fs %)
-                   (if (.isAbsolute path p) [p] (concat on-path (installed-places)))))))
+                   (cond (.isAbsolute path p) [p]
+                         chosen on-path
+                         :else (concat (when-let [b (bundled-bin)]
+                                         [(.join path b (if windows? "clotran.cmd" "clotran"))])
+                                       on-path (installed-places)))))))
 
-(defn- program [] (or (find-program) (config "program") "clotran"))
+(defn- program [] (or (find-program) (not-empty (config "program")) "clotran"))
+
+(defn- use-bundled!
+  "The carried clotran made runnable (a .vsix may not keep the executable
+  bit) and put on the PATH of VS Code's terminals, so `clotran` works there."
+  [context]
+  (when-let [bin (bundled-bin)]
+    (when-not windows?
+      (let [home (.join path bin ".." "lib")]
+        (doseq [f [(.join path bin "clotran") (.join path bin "clotran-deps")
+                   (.join path home "clotran" "clotran") (.join path home "clotran" "clotran-bin")
+                   (.join path home "clotran-deps" "bin" "clotran-deps")]
+                :when (.existsSync fs f)]
+          (.chmodSync fs f 493))))   ; 0755
+    (.prepend (.-environmentVariableCollection context) "PATH" (str bin (.-delimiter path)))))
 
 (defn- output []
   (or (:output @state)
@@ -292,6 +321,8 @@
 (declare test-state)
 
 (defn activate [context]
+  (swap! state assoc :ext-path (.-extensionPath context))
+  (use-bundled! context)
   (if (find-program) (start-language-client! context) (offer-install! context))
   (register-debugger! context)
   (doseq [[name f] {"clotran.jackIn" jack-in "clotran.evalForm" eval-form "clotran.evalSelection" eval-selection

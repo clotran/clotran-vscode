@@ -5,6 +5,8 @@
 // clotran on PATH, so the extension installs the release itself.
 // VSIX=file runs the packaged extension -- the .vsix unpacked -- not this
 // folder, so what the Marketplace would ship is what is tested.
+// BARE=1 gives suite.js the scratch HOME and clotran-less PATH too: with a
+// platform's .vsix, the clotran it carries is the only one there is.
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -13,7 +15,7 @@ const { runTests } = require('@vscode/test-electron');
 (async () => {
   const install = process.env.INSTALL === '1';
   let env = {};
-  if (install) {
+  if (install || process.env.BARE === '1') {
     const home = fs.mkdtempSync(path.join(os.tmpdir(), 'clotran-vscode-home-'));
     const dirs = (process.env.PATH || '').split(path.delimiter)
       .filter((d) => !['clotran', 'clotran.cmd'].some((c) => fs.existsSync(path.join(d, c))));

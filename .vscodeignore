@@ -6,3 +6,5 @@ out/test.js
 .vscode-test/**
 *.vsix
 .gitignore
+scripts/**
+dist/**

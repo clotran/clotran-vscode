@@ -1,0 +1,79 @@
+#!/usr/bin/env bb
+;; scripts/package -- the extension, one .vsix per platform, each carrying
+;; that platform's clotran release, so installing the extension from the
+;; Marketplace or Open VSX installs clotran too; and one with none (the
+;; universal package, for a platform clotran has no release for), which
+;; offers clotran's install script instead.
+;;
+;;   scripts/package VERSION              every platform, from the release
+;;                                        github.com/clotran/clotran v VERSION,
+;;                                        each checked against its SHA256SUMS
+;;   scripts/package --local TARGET FILE  one platform, from a release file
+;;                                        built here (make dist), to test
+;;
+;; Out: dist/clotran-TARGET.vsix, and dist/clotran.vsix (universal).
+(require '[babashka.fs :as fs]
+         '[babashka.process :as p]
+         '[clojure.string :as str])
+
+;; VS Code's platform names, and clotran's release for each
+(def targets {"darwin-arm64" "darwin-arm64.tar.gz"
+              "linux-x64" "linux-x86_64.tar.gz"
+              "linux-arm64" "linux-aarch64.tar.gz"
+              "alpine-x64" "linux-x86_64-musl.tar.gz"
+              "alpine-arm64" "linux-aarch64-musl.tar.gz"
+              "win32-x64" "windows-x86_64.zip"})
+
+(def here (str (fs/parent (fs/parent (fs/absolutize *file*)))))
+(def carried (str here "/clotran"))
+(defn die [& xs] (binding [*out* *err*] (apply println "package:" xs)) (System/exit 1))
+(defn sh [& args] (apply p/shell {:dir here} args))
+
+(defn sha256 [f]
+  (first (str/split (:out (p/shell {:out :string} "shasum" "-a" "256" (str f))) #"\s")))
+
+(defn unpack!
+  "The release file's one top directory, as clotran/ in the extension."
+  [file]
+  (fs/delete-tree carried)
+  (let [tmp (str (fs/create-temp-dir {:prefix "clotran-vsix"}))]
+    (if (str/ends-with? file ".zip")
+      (p/shell "unzip" "-q" file "-d" tmp)
+      (p/shell "tar" "xzf" file "-C" tmp))
+    (let [[top & more] (fs/list-dir tmp)]
+      (when (or more (not (fs/directory? top))) (die file "does not hold one directory"))
+      (fs/move top carried))))
+
+(defn package! [target]
+  (fs/create-dirs (str here "/dist"))
+  (let [out (str "dist/clotran" (when target (str "-" target)) ".vsix")]
+    (apply sh (concat ["npx" "vsce" "package" "-o" out] (when target ["--target" target])))
+    (println "package:" out)))
+
+(sh "npx" "shadow-cljs" "release" "ext")
+(let [[a b c] *command-line-args*]
+  (try
+    (cond
+      (= a "--local")
+      (do (when-not (and (targets b) c (fs/exists? c)) (die "--local TARGET FILE, TARGET one of" (str/join " " (sort (keys targets)))))
+          (unpack! (str (fs/absolutize c)))
+          (package! b))
+
+      (and a (re-matches #"\d+\.\d+\.\d+(-[\w.]+)?" a))
+      (let [base (str "https://github.com/clotran/clotran/releases/download/v" a)
+            dl (str (fs/create-temp-dir {:prefix "clotran-release"}))
+            fetch (fn [n] (let [f (str dl "/" n)] (p/shell "curl" "-fsSL" "-o" f (str base "/" n)) f))
+            sums (into {} (for [l (str/split-lines (slurp (fetch "SHA256SUMS")))
+                                :let [[h n] (str/split (str/trim l) #"\s+\*?")] :when n]
+                            [n h]))]
+        (doseq [[target suffix] (sort targets)
+                :let [n (str "clotran-" a "-" suffix)
+                      f (fetch n)]]
+          (when-not (= (sums n) (sha256 f)) (die n "does not match its SHA256SUMS entry"))
+          (unpack! f)
+          (package! target))
+        (fs/delete-tree carried)
+        (package! nil))
+
+      :else (die "usage: scripts/package VERSION | --local TARGET FILE"))
+    (finally (fs/delete-tree carried))))

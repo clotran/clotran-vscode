@@ -11,6 +11,11 @@ CLOTRAN="${CLOTRAN:-$here/../clotran/clotran}" node out/test.js || exit 1
 # VS Code itself (downloaded once into .vscode-test/) on test/fixtures/proj,
 # with `clotran` from the checkout on its PATH; E2E=0 skips it
 if [ "${E2E:-1}" != 0 ]; then
-  PATH="$(dirname "${CLOTRAN:-$here/../clotran/clotran}"):$PATH" node test/e2e/run.js 2>&1 | grep -v '^\[main\|^Warning\|Electron' || exit 1
+  # node's status, not grep's: a failing run printed through a pipe passed
+  log=$(mktemp) || exit 1
+  PATH="$(dirname "${CLOTRAN:-$here/../clotran/clotran}"):$PATH" node test/e2e/run.js >"$log" 2>&1
+  st=$?
+  grep -v '^\[main\|^Warning\|Electron' "$log"; rm -f "$log"
+  [ $st -eq 0 ] || { echo "CLOTRAN-VSCODE TESTS FAILED"; exit 1; }
 fi
 echo "CLOTRAN-VSCODE TESTS PASSED"

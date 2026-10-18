@@ -96,7 +96,8 @@ exports.run = async () => {
   const tid = stopped.body.threadId;
   const st = await session.customRequest('stackTrace', { threadId: tid, levels: 3 });
   ok('and stops at the breakpoint in the Fortran subroutine, with its source line',
-     [st.stackFrames[0].name, st.stackFrames[0].line, path.basename(st.stackFrames[0].source.path)], ['__mylib_MOD_scale', 8, 'mylib.f90']);
+     // the routine as gfortran and as flang name it
+     [['__mylib_MOD_scale', '_QMmylibPscale'].includes(st.stackFrames[0].name), st.stackFrames[0].line, path.basename(st.stackFrames[0].source.path)], [true, 8, 'mylib.f90']);
   await vscode.debug.stopDebugging(session);
   vscode.debug.removeBreakpoints(vscode.debug.breakpoints);
   ok('and the session ends', await until('the session to end', async () => !vscode.debug.activeDebugSession, 30), true);

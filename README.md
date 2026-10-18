@@ -23,7 +23,14 @@ nothing else to install.
   to native code, waiting for the build and saying how it went. What is
   printed goes to the `clotran` output channel.
 
-With no clotran on the machine, the extension offers to install it:
+Installed from the Marketplace or Open VSX, the extension brings clotran
+with it: VS Code picks the build for this machine (macOS arm64, Linux
+x64 and arm64, Alpine x64 and arm64, Windows x64), each carrying that
+platform's clotran release, which the extension uses and puts on the
+PATH of VS Code's terminals.
+
+Elsewhere (the universal build, for a machine clotran has no release
+for), the extension offers to install clotran:
 **Install clotran** (or **clotran: Install clotran** from the command
 palette) runs clotran's own install script -- the release for this
 machine, checked against its SHA256SUMS, into `~/.local` (on Windows
@@ -43,7 +50,12 @@ ClojureScript, compiled by shadow-cljs to `out/extension.js`:
 
     npm install
     npm run build        # shadow-cljs release ext
-    npm run package      # a .vsix, to install with: code --install-extension clotran-0.1.0.vsix
+    npm run package      # the universal .vsix, carrying no clotran
+    scripts/package 1.0.0           # one .vsix per platform, each with that
+                                    # release, checked against its SHA256SUMS
+    scripts/package --local darwin-arm64 ../clotran/build/dist/clotran-*.tar.gz
+                                    # one platform, from a release built here
+    code --install-extension dist/clotran-darwin-arm64.vsix
 
 For development, `npm run watch` and VS Code's *Run Extension* (F5) on
 this folder, or `code --extensionDevelopmentPath=$PWD`.
