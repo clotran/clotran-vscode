@@ -1,7 +1,28 @@
 {
   "name": "clotran",
   "displayName": "clotran",
-  "description": "clotran -- Clojure hosted on Fortran: the language server, a REPL, evaluate at the cursor, load, compile.",
+  "description": "clotran -- Clojure hosted on Fortran, installed with the extension: the language server, a REPL, evaluate at the cursor, load and compile, and a debugger that stops in Fortran.",
+  "icon": "images/icon.png",
+  "galleryBanner": {
+    "color": "#2a0068",
+    "theme": "dark"
+  },
+  "pricing": "Free",
+  "homepage": "https://github.com/clotran/clotran",
+  "bugs": {
+    "url": "https://github.com/clotran/clotran-vscode/issues"
+  },
+  "keywords": [
+    "clojure",
+    "fortran",
+    "clotran",
+    "lisp",
+    "repl",
+    "nrepl",
+    "lsp",
+    "debugger",
+    "scientific computing"
+  ],
   "version": "0.1.0",
   "publisher": "clotran",
   "license": "EPL-2.0",
@@ -13,7 +34,9 @@
     "vscode": "^1.95.0"
   },
   "categories": [
-    "Programming Languages"
+    "Programming Languages",
+    "Debuggers",
+    "Formatters"
   ],
   "activationEvents": [
     "workspaceContains:**/*.cljf",
