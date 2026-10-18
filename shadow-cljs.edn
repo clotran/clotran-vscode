@@ -1,0 +1,16 @@
+;; clotran-vscode is ClojureScript, built by shadow-cljs into out/extension.js,
+;; the file package.json's "main" names; `vscode` and Node's modules are
+;; required at run time, from the editor.
+{:source-paths ["src" "test"]
+ :dependencies []
+ :builds {:ext {:target :node-library
+                :output-to "out/extension.js"
+                :exports {:activate clotran.vscode.extension/activate
+                          :deactivate clotran.vscode.extension/deactivate
+                          :testState clotran.vscode.extension/test-state}
+                ;; :simple, not :advanced: the editor's and Node's objects are
+                ;; reached by name everywhere, and no extern list is kept
+                :compiler-options {:optimizations :simple}}
+          :test {:target :node-test
+                 :output-to "out/test.js"
+                 :ns-regexp "-test$"}}}

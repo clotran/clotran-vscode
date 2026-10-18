@@ -1,0 +1,116 @@
+{
+  "name": "clotran",
+  "displayName": "clotran",
+  "description": "clotran -- Clojure hosted on Fortran: the language server, a REPL, evaluate at the cursor, load, compile.",
+  "version": "0.1.0",
+  "publisher": "clotran",
+  "license": "EPL-1.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/clotran/clotran-vscode"
+  },
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "workspaceContains:**/*.cljf",
+    "workspaceContains:**/package.edn"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "clojure",
+        "extensions": [
+          ".cljf"
+        ]
+      }
+    ],
+    "commands": [
+      {
+        "command": "clotran.jackIn",
+        "title": "clotran: Start a REPL (jack-in)"
+      },
+      {
+        "command": "clotran.evalForm",
+        "title": "clotran: Evaluate the form at the cursor"
+      },
+      {
+        "command": "clotran.evalSelection",
+        "title": "clotran: Evaluate the selection"
+      },
+      {
+        "command": "clotran.loadFile",
+        "title": "clotran: Load this file"
+      },
+      {
+        "command": "clotran.compileFile",
+        "title": "clotran: Load and compile this file to native code"
+      },
+      {
+        "command": "clotran.quit",
+        "title": "clotran: Quit the REPL"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "clotran.evalForm",
+        "key": "ctrl+enter",
+        "mac": "cmd+enter",
+        "when": "editorTextFocus && editorLangId == clojure && !editorHasSelection"
+      },
+      {
+        "command": "clotran.evalSelection",
+        "key": "ctrl+enter",
+        "mac": "cmd+enter",
+        "when": "editorTextFocus && editorLangId == clojure && editorHasSelection"
+      },
+      {
+        "command": "clotran.loadFile",
+        "key": "ctrl+alt+c l",
+        "when": "editorTextFocus && editorLangId == clojure"
+      },
+      {
+        "command": "clotran.compileFile",
+        "key": "ctrl+alt+c k",
+        "when": "editorTextFocus && editorLangId == clojure"
+      },
+      {
+        "command": "clotran.jackIn",
+        "key": "ctrl+alt+c j"
+      }
+    ],
+    "configuration": {
+      "title": "clotran",
+      "properties": {
+        "clotran.program": {
+          "type": "string",
+          "default": "clotran",
+          "description": "The clotran command; a full path when VS Code's PATH has none."
+        },
+        "clotran.languageServer": {
+          "type": "boolean",
+          "default": true,
+          "description": "Start clotran lsp for the workspace."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "shadow-cljs release ext",
+    "watch": "shadow-cljs watch ext",
+    "test": "shadow-cljs compile test && node out/test.js",
+    "package": "vsce package --no-dependencies"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "shadow-cljs": "^2.28.20",
+    "@vscode/vsce": "^3.2.1",
+    "@vscode/test-electron": "^2.4.1"
+  }
+}

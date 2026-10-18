@@ -1,0 +1,19 @@
+(ns app.core
+  "The fixture project's main namespace: what test/lsp_test.cljf opens."
+  (:require [app.util :as u :refer [twice]]
+            [clojure.string :as str]))
+
+(defn greet
+  "Says hello, loudly."
+  [name]
+  (str "hello " (u/shout name) " " (twice 2)))
+
+(def ^:private counter (atom 0))
+
+(defn run []
+  (println "é😀" (map inc [1 2]))
+  (println (greet "world") (str/trim " x ")))
+
+(comment
+  (fortran/load-package "src/mylib")
+  (mylib.raw/scale 3 2.0 (double-array [1 2 3])))
