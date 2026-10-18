@@ -1,0 +1,5 @@
+;; what test/dap_test.cljf debugs: a package routine called from clotran
+(fortran/load-package "src/mylib")
+(println (mylib.raw/norm2sq 3 (double-array [1 2 3])))
+(mylib.raw/scale 3 2.0 (double-array [1 2 3]))
+(println "done")

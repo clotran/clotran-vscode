@@ -79,6 +79,28 @@ exports.run = async () => {
   ok('quit disconnects', ext.exports.testState().connected, false);
   await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
 
+  // the debugger: a breakpoint in the package's Fortran, the fixture's debug.cljf
+  // run under clotran dap, the stop and its stack read back through the session
+  const f90 = vscode.Uri.file(path.join(root, 'src', 'mylib', 'mylib.f90'));
+  vscode.debug.addBreakpoints([new vscode.SourceBreakpoint(new vscode.Location(f90, new vscode.Position(7, 0)))]);
+  // a tracker sees every DAP message of the session: the stop, and its thread
+  const seen = [];
+  vscode.debug.registerDebugAdapterTrackerFactory('clotran', { createDebugAdapterTracker: () => ({
+    onDidSendMessage: (m) => seen.push(m), onWillReceiveMessage: (m) => seen.push(m) }) });
+  const started = await vscode.debug.startDebugging(vscode.workspace.workspaceFolders[0],
+    { type: 'clotran', request: 'launch', name: 'e2e', program: 'debug.cljf', cwd: root });
+  ok('a clotran debug session starts', started, true);
+  const session = vscode.debug.activeDebugSession;
+  const stopped = await until('the debuggee to stop', async () => seen.find((m) => m.type === 'event' && m.event === 'stopped') || null, 120)
+    .catch((e) => { console.log('DAP messages seen: ' + seen.map((m) => m.type === 'event' ? 'event:' + m.event : m.type + ':' + m.command).join(' ')); throw e; });
+  const tid = stopped.body.threadId;
+  const st = await session.customRequest('stackTrace', { threadId: tid, levels: 3 });
+  ok('and stops at the breakpoint in the Fortran subroutine, with its source line',
+     [st.stackFrames[0].name, st.stackFrames[0].line, path.basename(st.stackFrames[0].source.path)], ['__mylib_MOD_scale', 8, 'mylib.f90']);
+  await vscode.debug.stopDebugging(session);
+  vscode.debug.removeBreakpoints(vscode.debug.breakpoints);
+  ok('and the session ends', await until('the session to end', async () => !vscode.debug.activeDebugSession, 30), true);
+
   console.log(checks.every((c) => c) ? 'VSCODE E2E PASSED' : 'VSCODE E2E FAILED');
   if (!checks.every((c) => c)) throw new Error('e2e: ' + checks.filter((c) => !c).length + ' checks failed');
 };

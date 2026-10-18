@@ -17,7 +17,8 @@
   ],
   "activationEvents": [
     "workspaceContains:**/*.cljf",
-    "workspaceContains:**/package.edn"
+    "workspaceContains:**/package.edn",
+    "onDebugResolve:clotran"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -44,7 +45,7 @@
       },
       {
         "command": "clotran.loadFile",
-        "title": "clotran: Load this file"
+        "title": "clotran: Load this file (a Fortran file: rebuild its package)"
       },
       {
         "command": "clotran.compileFile",
@@ -71,7 +72,7 @@
       {
         "command": "clotran.loadFile",
         "key": "ctrl+alt+c l",
-        "when": "editorTextFocus && editorLangId == clojure"
+        "when": "editorTextFocus && (editorLangId == clojure || resourceExtname =~ /\\.(f90|f95|f03|f08|f)$/i)"
       },
       {
         "command": "clotran.compileFile",
@@ -97,7 +98,66 @@
           "description": "Start clotran lsp for the workspace."
         }
       }
-    }
+    },
+    "debuggers": [
+      {
+        "type": "clotran",
+        "label": "clotran",
+        "languages": [
+          "clojure"
+        ],
+        "configurationAttributes": {
+          "launch": {
+            "required": [
+              "program"
+            ],
+            "properties": {
+              "program": {
+                "type": "string",
+                "description": "The .cljf file to run, relative to the workspace.",
+                "default": "${file}"
+              },
+              "args": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              },
+              "cwd": {
+                "type": "string",
+                "default": "${workspaceFolder}"
+              },
+              "stopOnEntry": {
+                "type": "boolean",
+                "default": false
+              }
+            }
+          }
+        },
+        "initialConfigurations": [
+          {
+            "type": "clotran",
+            "request": "launch",
+            "name": "clotran: run this file",
+            "program": "${file}",
+            "cwd": "${workspaceFolder}"
+          }
+        ],
+        "configurationSnippets": [
+          {
+            "label": "clotran: run a file",
+            "body": {
+              "type": "clotran",
+              "request": "launch",
+              "name": "clotran: ${1:main.cljf}",
+              "program": "${workspaceFolder}/${1:src/app/main.cljf}",
+              "cwd": "${workspaceFolder}"
+            }
+          }
+        ]
+      }
+    ]
   },
   "scripts": {
     "build": "shadow-cljs release ext",

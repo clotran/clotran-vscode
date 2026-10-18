@@ -54,3 +54,19 @@ this folder, or `code --extensionDevelopmentPath=$PWD`.
   request a promise of its replies combined.
 - `clotran.vscode.extension` -- `activate`: the language client, the
   commands, the inline results.
+
+## Debugging
+
+The extension contributes the `clotran` debug type: *Run and Debug*,
+**clotran: run this file**, or a `launch.json` entry
+
+```json
+{"type": "clotran", "request": "launch", "name": "clotran: main",
+ "program": "${workspaceFolder}/src/app/main.cljf", "cwd": "${workspaceFolder}"}
+```
+
+runs the file under `clotran dap`
+([clotran-ide](https://github.com/clotran/clotran-ide)), which drives
+lldb-dap underneath: a breakpoint set in a package's Fortran source
+stops there with the call stack. Stage one: Fortran locals and Clojure
+frames shown as Clojure are still to come.

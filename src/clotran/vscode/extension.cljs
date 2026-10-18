@@ -206,8 +206,18 @@
 
 ;;; ---- activation -------------------------------------------------------------------
 
+(defn- register-debugger! [context]
+  ;; the `clotran` debug type (package.json): clotran dap, in the workspace
+  (.push (.-subscriptions context)
+         (.registerDebugAdapterDescriptorFactory
+          (.-debug vscode) "clotran"
+          #js {:createDebugAdapterDescriptor
+               (fn [_session _executable]
+                 (new (.-DebugAdapterExecutable vscode) (program) #js ["dap"] #js {:cwd (or (workspace-root) ".")}))})))
+
 (defn activate [context]
   (start-language-client! context)
+  (register-debugger! context)
   (doseq [[name f] {"clotran.jackIn" jack-in "clotran.evalForm" eval-form "clotran.evalSelection" eval-selection
                     "clotran.loadFile" load-file! "clotran.compileFile" compile-file! "clotran.quit" quit}]
     (.push (.-subscriptions context) (.registerCommand (.-commands vscode) name f)))
