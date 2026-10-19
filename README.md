@@ -23,26 +23,30 @@ nothing else to install.
   to native code, waiting for the build and saying how it went. What is
   printed goes to the `clotran` output channel.
 
-Installed from the Marketplace or Open VSX, the extension brings clotran
-with it: VS Code picks the build for this machine (macOS arm64, Linux
+Installed from the Visual Studio Marketplace (it is not on Open VSX),
+the extension brings clotran with it: VS Code picks the build for this machine (macOS arm64, Linux
 x64 and arm64, Alpine x64 and arm64, Windows x64), each carrying that
 platform's clotran release, which the extension uses and puts on the
 PATH of VS Code's terminals.
 
-Elsewhere (the universal build, for a machine clotran has no release
-for), the extension offers to install clotran:
+Elsewhere (the universal build), the extension offers to install clotran:
 **Install clotran** (or **clotran: Install clotran** from the command
 palette) runs clotran's own install script -- the release for this
 machine, checked against its SHA256SUMS, into `~/.local` (on Windows
 `%LOCALAPPDATA%\Programs\clotran`), where a terminal finds it too -- and
-starts the language server. A Fortran compiler (gfortran or flang) is
-needed for packages; lldb-dap for the debugger.
+starts the language server. There is no release for an Intel Mac, so
+there the script has nothing to install.
+
+Compiling (`Ctrl+Alt+C K`) and Fortran packages need a Fortran compiler,
+gfortran or flang; the debugger needs lldb-dap (Xcode's on macOS, LLVM's
+elsewhere).
 
 Settings: `clotran.program`, the command (`clotran` by default; a full
 path when VS Code's PATH has none), and `clotran.languageServer`.
 
 The extension activates in a workspace that holds a `.cljf` file or a
-`package.edn`, so a plain Clojure project is left to its own tools.
+`package.edn`, and otherwise once VS Code has started, so its commands
+are there in any window.
 
 ## Building
 
@@ -51,7 +55,7 @@ ClojureScript, compiled by shadow-cljs to `out/extension.js`:
     npm install
     npm run build        # shadow-cljs release ext
     npm run package      # the universal .vsix, carrying no clotran
-    scripts/package 1.0.0           # one .vsix per platform, each with that
+    scripts/package 1.0.0-rc.8      # one .vsix per platform, each with that
                                     # release, checked against its SHA256SUMS
     scripts/package --local darwin-arm64 ../clotran/build/dist/clotran-*.tar.gz
                                     # one platform, from a release built here
