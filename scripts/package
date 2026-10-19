@@ -1,7 +1,7 @@
 #!/usr/bin/env bb
 ;; scripts/package -- the extension, one .vsix per platform, each carrying
 ;; that platform's clotran release, so installing the extension from the
-;; Marketplace or Open VSX installs clotran too; and one with none (the
+;; Marketplace installs clotran too; and one with none (the
 ;; universal package, for a platform clotran has no release for), which
 ;; offers clotran's install script instead.
 ;;
